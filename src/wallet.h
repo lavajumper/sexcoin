@@ -43,11 +43,11 @@ static const CAmount DEFAULT_TRANSACTION_FEE = 0;
 //! -paytxfee will warn if called with a higher fee than this amount (in satoshis) per KB
 static const CAmount nHighTransactionFeeWarning = 0.01 * COIN;
 //! -maxtxfee default
-static const CAmount DEFAULT_TRANSACTION_MAXFEE = 0.1 * COIN;
+static const CAmount DEFAULT_TRANSACTION_MAXFEE = 1.0 * COIN;
 //! -maxtxfee will warn if called with a higher fee than this amount (in satoshis)
 static const CAmount nHighTransactionMaxFeeWarning = 100 * nHighTransactionFeeWarning;
-//! Largest (in bytes) free transaction we're willing to create
-static const unsigned int MAX_FREE_TRANSACTION_CREATE_SIZE = 5000;
+//! Largest (in bytes) free transaction we're willing to create (~25 inputs / 1 output)
+static const unsigned int MAX_FREE_TRANSACTION_CREATE_SIZE = 6000;
 
 class CAccountingEntry;
 class CCoinControl;
@@ -290,10 +290,15 @@ public:
     CAmount GetWatchOnlyBalance() const;
     CAmount GetUnconfirmedWatchOnlyBalance() const;
     CAmount GetImmatureWatchOnlyBalance() const;
-    bool CreateTransaction(const std::vector<std::pair<CScript, CAmount> >& vecSend,
-                           CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet, std::string& strFailReason, const CCoinControl *coinControl = NULL);
+
     bool CreateTransaction(CScript scriptPubKey, const CAmount& nValue,
-                           CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet, std::string& strFailReason, const CCoinControl *coinControl = NULL);
+                           CWalletTx& wtxNew, int32_t nVersion, CReserveKey& reservekey, CAmount& nFeeRet, std::string& strFailReason, const CCoinControl *coinControl = NULL);
+    
+    bool CreateTransaction(const std::vector<std::pair<CScript, CAmount> >& vecSend,
+                           CWalletTx& wtxNew, int32_t nVersion, CReserveKey& reservekey, CAmount& nFeeRet, std::string& strFailReason, const CCoinControl *coinControl = NULL);
+    //bool CreateTransaction(const std::vector<std::pair<CScript, CAmount> >& vecSend,
+    //                       CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet, std::string& strFailReason, const CCoinControl *coinControl = NULL);
+    
     bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey);
 
     static CFeeRate minTxFee;
@@ -904,11 +909,13 @@ public:
         }
         return true;
     }
+    
 
     bool WriteToDisk();
 
     int64_t GetTxTime() const;
     int GetRequestCount() const;
+    uint32_t GetTxFlags() const;
 
     void RelayWalletTransaction();
 

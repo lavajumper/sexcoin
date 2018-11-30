@@ -31,6 +31,7 @@ static int column_alignments[] = {
         Qt::AlignLeft|Qt::AlignVCenter, /* date */
         Qt::AlignLeft|Qt::AlignVCenter, /* type */
         Qt::AlignLeft|Qt::AlignVCenter, /* address */
+        Qt::AlignLeft|Qt::AlignVCenter, /* flags */
         Qt::AlignRight|Qt::AlignVCenter /* amount */
     };
 
@@ -226,7 +227,7 @@ TransactionTableModel::TransactionTableModel(CWallet* wallet, WalletModel *paren
         priv(new TransactionTablePriv(wallet, this)),
         fProcessingQueuedTransactions(false)
 {
-    columns << QString() << QString() << tr("Date") << tr("Type") << tr("Address") << BitcoinUnits::getAmountColumnTitle(walletModel->getOptionsModel()->getDisplayUnit());
+    columns << QString() << QString() << tr("Date") << tr("Type") << tr("Flags") << tr("Address") << BitcoinUnits::getAmountColumnTitle(walletModel->getOptionsModel()->getDisplayUnit());
     priv->refreshWallet();
 
     connect(walletModel->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
@@ -440,6 +441,39 @@ QString TransactionTableModel::formatTxAmount(const TransactionRecord *wtx, bool
     return QString(str);
 }
 
+QString TransactionTableModel::formatTxFlags(const TransactionRecord *wtx ) const
+{
+    switch(wtx->version >> 16)
+    {
+    case TX_F_NONE:
+        return QString("None");
+    case TX_F_IS_OVER_CONSENT:
+        return QString("consent");
+    case TX_F_IS_OVER_18:
+        return QString("over18");
+    case TX_F_IS_OVER_21:
+        return QString("over21");
+    }
+    return QString("*");
+
+}
+
+QVariant TransactionTableModel::txFlagsDecoration(const TransactionRecord *wtx) const
+{
+    switch(wtx->version >> 16)
+    {
+    case TX_F_NONE:
+        return QIcon(":/icons/txflag_none");
+    case TX_F_IS_OVER_CONSENT:
+        return QIcon(":/icons/txflag_consent");
+    case TX_F_IS_OVER_18:
+        return QIcon(":/icons/txflag_over18");
+    case TX_F_IS_OVER_21:
+        return QIcon(":/icons/txflag_over21");
+    }
+    return COLOR_BLACK;
+}
+
 QVariant TransactionTableModel::txStatusDecoration(const TransactionRecord *wtx) const
 {
     switch(wtx->status.status)
@@ -513,6 +547,8 @@ QVariant TransactionTableModel::data(const QModelIndex &index, int role) const
             return txWatchonlyDecoration(rec);
         case ToAddress:
             return txAddressDecoration(rec);
+        case TxFlags:
+            return txFlagsDecoration(rec);
         }
         break;
     case Qt::DisplayRole:
@@ -526,6 +562,8 @@ QVariant TransactionTableModel::data(const QModelIndex &index, int role) const
             return formatTxToAddress(rec, false);
         case Amount:
             return formatTxAmount(rec, true, BitcoinUnits::separatorAlways);
+        case TxFlags:
+            return formatTxFlags(rec);
         }
         break;
     case Qt::EditRole:
@@ -592,6 +630,8 @@ QVariant TransactionTableModel::data(const QModelIndex &index, int role) const
         return formatTxAmount(rec, false, BitcoinUnits::separatorNever);
     case StatusRole:
         return rec->status.status;
+    case TxFlagsRole:
+        return rec->version >> 16;
     }
     return QVariant();
 }
